@@ -281,7 +281,46 @@ actions.append({
 })
 
 # ============================================
-# BUILD CSV LINE: Data,Ora,Esercente,Categoria,Importo
+# BUILD READABLE LINE: dd/MM HH:mm | Esercente | Categoria | €Importo
+# ============================================
+# Template: "dd/MM HH:mm | Esercente | Categoria | €Importo"
+#            P    P        P           P            P
+readable_template = f"{P} {P} | {P} | {P} | \u20ac{P}"
+uuid_readable_line = uid()
+readable_attachments = {
+    "{0, 1}": make_attachment(uuid_format_date, "Formatted Date"),
+    "{2, 1}": make_attachment(uuid_format_time, "Formatted Date"),
+    "{6, 1}": make_attachment(uuid_get_esercente, "Variable"),
+    "{10, 1}": make_attachment(uuid_get_categoria, "Variable"),
+    "{15, 1}": make_attachment(uuid_get_importo, "Variable"),
+}
+
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
+    "WFWorkflowActionParameters": {
+        "WFTextActionText": make_token_string(readable_template, readable_attachments),
+        "UUID": uuid_readable_line,
+    }
+})
+
+# ============================================
+# APPEND TO TXT (human-readable, previews on iPhone)
+# ============================================
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
+    "WFWorkflowActionParameters": {
+        "WFFilePath": "Shortcuts/Spese.txt",
+        "WFInput": {
+            "Value": make_attachment(uuid_readable_line, "Text"),
+            "WFSerializationType": "WFTextTokenAttachment",
+        },
+        "WFAppendOnNewLine": True,
+        "WFFileAppendService": "iCloud",
+    }
+})
+
+# ============================================
+# ALSO APPEND CSV (for Excel export)
 # ============================================
 csv_template = f"{P},{P},{P},{P},{P}"
 csv_attachments = {
@@ -300,9 +339,6 @@ actions.append({
     }
 })
 
-# ============================================
-# APPEND TO FILE
-# ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
     "WFWorkflowActionParameters": {
