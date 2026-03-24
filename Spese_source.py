@@ -4,17 +4,15 @@ import uuid
 def uid():
     return str(uuid.uuid4()).upper()
 
-menu_group = uid()
-
 # Action output UUIDs
 uuid_get_amount = uid()
 uuid_get_merchant = uid()
-uuid_ask_amount = uid()
-uuid_ask_merchant = uid()
-uuid_set_cat = {}
-categories = ["Cibo", "Trasporti", "Abbigliamento", "Svago", "Bollette", "Altro"]
-for cat in categories:
-    uuid_set_cat[cat] = uid()
+uuid_replace_cibo = uid()
+uuid_replace_trasporti = uid()
+uuid_replace_abbigliamento = uid()
+uuid_replace_svago = uid()
+uuid_replace_bollette = uid()
+uuid_replace_altro = uid()
 uuid_date = uid()
 uuid_format_date = uid()
 uuid_format_time = uid()
@@ -39,6 +37,23 @@ def make_attachment(output_uuid, output_name):
         "OutputName": output_name,
     }
 
+def make_replace_action(find_pattern, replace_with, input_uuid, input_name, output_uuid):
+    """Replace Text action with regex, case-insensitive."""
+    action = {
+        "WFWorkflowActionIdentifier": "is.workflow.actions.text.replace",
+        "WFWorkflowActionParameters": {
+            "UUID": output_uuid,
+            "WFReplaceTextFind": find_pattern,
+            "WFReplaceTextReplace": replace_with,
+            "WFReplaceTextRegularExpression": True,
+            "WFReplaceTextCaseSensitive": False,
+            "WFInput": make_token_string("\ufffc", {
+                "{0, 1}": make_attachment(input_uuid, input_name),
+            }),
+        }
+    }
+    return action
+
 P = "\ufffc"
 
 actions = []
@@ -50,17 +65,15 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.comment",
     "WFWorkflowActionParameters": {
         "WFCommentActionText": (
-            "Spese Tracker v5\n"
-            "- Da Wallet: importo e esercente pre-compilati\n"
-            "- Manuale: campi vuoti da riempire\n"
-            "- Nessun If/Else, zero errori"
+            "Spese Tracker v6 - FULL AUTO\n"
+            "Zero tap: importo + esercente da Wallet,\n"
+            "categoria via regex, salva CSV, notifica."
         )
     }
 })
 
 # ============================================
 # EXTRACT AMOUNT FROM SHORTCUT INPUT
-# (Empty if launched manually — that's fine)
 # ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.detect.number",
@@ -75,9 +88,20 @@ actions.append({
     }
 })
 
+# SET VARIABLE importo
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
+    "WFWorkflowActionParameters": {
+        "WFVariableName": "importo",
+        "WFInput": {
+            "Value": make_attachment(uuid_get_amount, "Number"),
+            "WFSerializationType": "WFTextTokenAttachment",
+        },
+    }
+})
+
 # ============================================
-# EXTRACT MERCHANT FROM SHORTCUT INPUT
-# (Empty if launched manually — that's fine)
+# EXTRACT MERCHANT FROM SHORTCUT INPUT AS TEXT
 # ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
@@ -97,105 +121,89 @@ actions.append({
     }
 })
 
-# ============================================
-# ASK ESERCENTE (pre-filled with merchant if from Wallet)
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
-    "WFWorkflowActionParameters": {
-        "WFAskActionPrompt": "Esercente?",
-        "WFInputType": "Text",
-        "WFAskActionDefaultAnswer": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_get_merchant, "Text"),
-        }),
-        "UUID": uuid_ask_merchant,
-    }
-})
-
 # SET VARIABLE esercente
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
     "WFWorkflowActionParameters": {
         "WFVariableName": "esercente",
         "WFInput": {
-            "Value": make_attachment(uuid_ask_merchant, "Provided Input"),
+            "Value": make_attachment(uuid_get_merchant, "Text"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
     }
 })
 
 # ============================================
-# ASK IMPORTO (pre-filled with amount if from Wallet)
+# REGEX CATEGORY CHAIN
+# Each replace takes the merchant text and if it matches
+# the keywords, replaces the ENTIRE text with the category.
+# If no match, text passes through unchanged.
+# Final catch-all replaces anything that's not a category with "Altro".
 # ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
-    "WFWorkflowActionParameters": {
-        "WFAskActionPrompt": "Importo (EUR)?",
-        "WFInputType": "Number",
-        "WFAskActionDefaultAnswer": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_get_amount, "Number"),
-        }),
-        "UUID": uuid_ask_amount,
-    }
-})
 
-# SET VARIABLE importo
+# 1. Cibo
+actions.append(make_replace_action(
+    find_pattern="(?i)^.*(bar|ristorante|pizz|mcdonald|burger|sushi|kebab|trattoria|osteria|gelateria|pasticceria|supermercato|conad|coop|lidl|esselunga|carrefour|eurospin|pam|despar|iper|penny|md |aldi|tigre|crai|simply|alimentari|panificio|macelleria|forno|caffe|caffè|starbucks|autogrill|chef|cucina|gastronomia|rosticceria|friggitoria|paninoteca|tavola calda|mensa|food|eat|just eat|deliveroo|glovo).*$",
+    replace_with="Cibo",
+    input_uuid=uuid_get_merchant,
+    input_name="Text",
+    output_uuid=uuid_replace_cibo,
+))
+
+# 2. Trasporti
+actions.append(make_replace_action(
+    find_pattern="(?i)^.*(treni|trenitalia|italo|uber|taxi|cabify|bolt|eni |agip|ip |q8|total|shell|autostrad|parking|parcheggio|metro|bus|atm|amt|anm|cotral|flixbus|ryanair|easyjet|alitalia|ita airways|wizz|vueling|aeroporto|airport|stazione|railway|fuel|benzina|diesel|gpl|elettric|ricarica auto|telepass|car2go|enjoy|share).*$",
+    replace_with="Trasporti",
+    input_uuid=uuid_replace_cibo,
+    input_name="Replace Text",
+    output_uuid=uuid_replace_trasporti,
+))
+
+# 3. Abbigliamento
+actions.append(make_replace_action(
+    find_pattern="(?i)^.*(zara|h&m|ovs|primark|nike|adidas|decathlon|calzedonia|intimissimi|bershka|pull.bear|stradivarius|mango|uniqlo|terranova|alcott|pittarello|scarpe|footlocker|foot locker|zalando|bonprix|kiabi|subdued|tezenis|golden point|yamamay|camicissima|gutteridge|sartoria|merceria|tessuti).*$",
+    replace_with="Abbigliamento",
+    input_uuid=uuid_replace_trasporti,
+    input_name="Replace Text",
+    output_uuid=uuid_replace_abbigliamento,
+))
+
+# 4. Svago
+actions.append(make_replace_action(
+    find_pattern="(?i)^.*(cinema|netflix|spotify|amazon prime|playstation|xbox|steam|nintendo|teatro|stadio|bowling|escape room|disney|dazn|apple tv|youtube|twitch|concerti|concert|museo|mostra|parco|luna park|aquapark|spa|palestra|gym|fitness|crossfit|piscina|sport|hobby|giochi|game|slot|scommess|bet|poker|bingo|lotteria|gratta).*$",
+    replace_with="Svago",
+    input_uuid=uuid_replace_abbigliamento,
+    input_name="Replace Text",
+    output_uuid=uuid_replace_svago,
+))
+
+# 5. Bollette
+actions.append(make_replace_action(
+    find_pattern="(?i)^.*(enel|a2a|iren|hera|acea|eni gas|sorgenia|edison|tim|vodafone|wind|tre|fastweb|sky|iliad|ho mobile|very mobile|postemobile|tiscali|linkem|acqua|gas|luce|elettric|fibra|internet|adsl|assicuraz|insurance|generali|allianz|unipol|axa|mutuo|affitto|rent|condominio|imu|tari|tasi|bollo|canone rai|abbonamento).*$",
+    replace_with="Bollette",
+    input_uuid=uuid_replace_svago,
+    input_name="Replace Text",
+    output_uuid=uuid_replace_bollette,
+))
+
+# 6. Catch-all: anything that's NOT already a category → "Altro"
+actions.append(make_replace_action(
+    find_pattern="^(?!Cibo$|Trasporti$|Abbigliamento$|Svago$|Bollette$).+$",
+    replace_with="Altro",
+    input_uuid=uuid_replace_bollette,
+    input_name="Replace Text",
+    output_uuid=uuid_replace_altro,
+))
+
+# SET VARIABLE categoria
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
     "WFWorkflowActionParameters": {
-        "WFVariableName": "importo",
+        "WFVariableName": "categoria",
         "WFInput": {
-            "Value": make_attachment(uuid_ask_amount, "Provided Input"),
+            "Value": make_attachment(uuid_replace_altro, "Replace Text"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
-    }
-})
-
-# ============================================
-# CATEGORY - Choose from Menu
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
-    "WFWorkflowActionParameters": {
-        "GroupingIdentifier": menu_group,
-        "WFControlFlowMode": 0,
-        "WFMenuPrompt": "Categoria?",
-        "WFMenuItems": categories,
-    }
-})
-
-for cat in categories:
-    actions.append({
-        "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
-        "WFWorkflowActionParameters": {
-            "GroupingIdentifier": menu_group,
-            "WFControlFlowMode": 1,
-            "WFMenuItemTitle": cat,
-        }
-    })
-    actions.append({
-        "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
-        "WFWorkflowActionParameters": {
-            "WFTextActionText": cat,
-            "UUID": uuid_set_cat[cat],
-        }
-    })
-    actions.append({
-        "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
-        "WFWorkflowActionParameters": {
-            "WFVariableName": "categoria",
-            "WFInput": {
-                "Value": make_attachment(uuid_set_cat[cat], "Text"),
-                "WFSerializationType": "WFTextTokenAttachment",
-            },
-        }
-    })
-
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.choosefrommenu",
-    "WFWorkflowActionParameters": {
-        "GroupingIdentifier": menu_group,
-        "WFControlFlowMode": 2,
     }
 })
 
@@ -243,10 +251,7 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.getvariable",
     "WFWorkflowActionParameters": {
         "WFVariable": {
-            "Value": {
-                "Type": "Variable",
-                "VariableName": "importo",
-            },
+            "Value": {"Type": "Variable", "VariableName": "importo"},
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "UUID": uuid_get_importo,
@@ -257,10 +262,7 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.getvariable",
     "WFWorkflowActionParameters": {
         "WFVariable": {
-            "Value": {
-                "Type": "Variable",
-                "VariableName": "esercente",
-            },
+            "Value": {"Type": "Variable", "VariableName": "esercente"},
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "UUID": uuid_get_esercente,
@@ -271,10 +273,7 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.getvariable",
     "WFWorkflowActionParameters": {
         "WFVariable": {
-            "Value": {
-                "Type": "Variable",
-                "VariableName": "categoria",
-            },
+            "Value": {"Type": "Variable", "VariableName": "categoria"},
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "UUID": uuid_get_categoria,
@@ -320,17 +319,18 @@ actions.append({
 # ============================================
 # SHOW NOTIFICATION
 # ============================================
-notif_template = f"Spesa registrata: \u20ac{P} - {P}"
+notif_template = f"{P} | \u20ac{P} | {P}"
 notif_attachments = {
-    "{20, 1}": make_attachment(uuid_get_importo, "Variable"),
-    "{24, 1}": make_attachment(uuid_get_esercente, "Variable"),
+    "{0, 1}": make_attachment(uuid_get_esercente, "Variable"),
+    "{4, 1}": make_attachment(uuid_get_importo, "Variable"),
+    "{8, 1}": make_attachment(uuid_get_categoria, "Variable"),
 }
 
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
     "WFWorkflowActionParameters": {
         "WFNotificationActionBody": make_token_string(notif_template, notif_attachments),
-        "WFNotificationActionTitle": "Spese Tracker",
+        "WFNotificationActionTitle": "Spesa registrata",
         "WFNotificationActionSound": True,
     }
 })
