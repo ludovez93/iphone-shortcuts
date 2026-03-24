@@ -9,7 +9,6 @@ if_group = uid()
 menu_group = uid()
 
 # Action output UUIDs
-uuid_get_input = uid()
 uuid_get_amount = uid()
 uuid_get_merchant = uid()
 uuid_ask_merchant = uid()
@@ -50,43 +49,24 @@ actions.append({
 })
 
 # ============================================
-# GET SHORTCUT INPUT (to reference it)
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
-    "WFWorkflowActionParameters": {
-        "WFTextActionText": {
-            "Value": {
-                "string": P,
-                "attachmentsByRange": {
-                    "{0, 1}": {
-                        "Type": "ExtensionInput",
-                    }
-                }
-            },
-            "WFSerializationType": "WFTextTokenString",
-        },
-        "UUID": uuid_get_input,
-    }
-})
-
-# ============================================
-# IF - Input "Has Any Value" (WFCondition = 100)
-# Format verified from Cherri compiler source
+# IF - Shortcut Input "Has Any Value" (WFCondition=100)
+# Format from python-shortcuts library (verified working)
+# WFInput uses Type:Variable + Variable wrapper for ExtensionInput
 # ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
     "WFWorkflowActionParameters": {
         "GroupingIdentifier": if_group,
-        "WFControlFlowMode": 0,  # IF
-        "WFCondition": 100,  # "Has Any Value"
+        "WFControlFlowMode": 0,
+        "WFCondition": 100,
         "WFInput": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_get_input,
-                "OutputName": "Text",
+            "Type": "Variable",
+            "Variable": {
+                "Value": {
+                    "Type": "ExtensionInput",
+                },
+                "WFSerializationType": "WFTextTokenAttachment",
             },
-            "WFSerializationType": "WFTextTokenAttachment",
         },
     }
 })
@@ -165,7 +145,7 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
     "WFWorkflowActionParameters": {
         "GroupingIdentifier": if_group,
-        "WFControlFlowMode": 1,  # OTHERWISE
+        "WFControlFlowMode": 1,
     }
 })
 
@@ -228,7 +208,7 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
     "WFWorkflowActionParameters": {
         "GroupingIdentifier": if_group,
-        "WFControlFlowMode": 2,  # END IF
+        "WFControlFlowMode": 2,
     }
 })
 
