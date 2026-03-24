@@ -4,15 +4,13 @@ import uuid
 def uid():
     return str(uuid.uuid4()).upper()
 
-# Group UUIDs
-if_group = uid()
 menu_group = uid()
 
 # Action output UUIDs
 uuid_get_amount = uid()
 uuid_get_merchant = uid()
-uuid_ask_merchant = uid()
 uuid_ask_amount = uid()
+uuid_ask_merchant = uid()
 uuid_set_cat = {}
 categories = ["Cibo", "Trasporti", "Abbigliamento", "Svago", "Bollette", "Altro"]
 for cat in categories:
@@ -34,6 +32,13 @@ def make_token_string(template, attachments):
         "WFSerializationType": "WFTextTokenString",
     }
 
+def make_attachment(output_uuid, output_name):
+    return {
+        "Type": "ActionOutput",
+        "OutputUUID": output_uuid,
+        "OutputName": output_name,
+    }
+
 P = "\ufffc"
 
 actions = []
@@ -44,36 +49,19 @@ actions = []
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.comment",
     "WFWorkflowActionParameters": {
-        "WFCommentActionText": "Spese Tracker - Apple Pay automatico + manuale"
+        "WFCommentActionText": (
+            "Spese Tracker v5\n"
+            "- Da Wallet: importo e esercente pre-compilati\n"
+            "- Manuale: campi vuoti da riempire\n"
+            "- Nessun If/Else, zero errori"
+        )
     }
 })
 
 # ============================================
-# IF - Shortcut Input "Has Any Value" (WFCondition=100)
-# Format from python-shortcuts library (verified working)
-# WFInput uses Type:Variable + Variable wrapper for ExtensionInput
+# EXTRACT AMOUNT FROM SHORTCUT INPUT
+# (Empty if launched manually — that's fine)
 # ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
-    "WFWorkflowActionParameters": {
-        "GroupingIdentifier": if_group,
-        "WFControlFlowMode": 0,
-        "WFCondition": 100,
-        "WFInput": {
-            "Type": "Variable",
-            "Variable": {
-                "Value": {
-                    "Type": "ExtensionInput",
-                },
-                "WFSerializationType": "WFTextTokenAttachment",
-            },
-        },
-    }
-})
-
-# ---- INSIDE IF: Apple Pay triggered ----
-
-# Get Amount from Shortcut Input
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.detect.number",
     "WFWorkflowActionParameters": {
@@ -87,23 +75,10 @@ actions.append({
     }
 })
 
-# Set Variable importo (auto)
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
-    "WFWorkflowActionParameters": {
-        "WFVariableName": "importo",
-        "WFInput": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_get_amount,
-                "OutputName": "Number",
-            },
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
-    }
-})
-
-# Get Merchant from Shortcut Input as text
+# ============================================
+# EXTRACT MERCHANT FROM SHORTCUT INPUT
+# (Empty if launched manually — that's fine)
+# ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
     "WFWorkflowActionParameters": {
@@ -122,93 +97,57 @@ actions.append({
     }
 })
 
-# Set Variable esercente (auto)
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
-    "WFWorkflowActionParameters": {
-        "WFVariableName": "esercente",
-        "WFInput": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_get_merchant,
-                "OutputName": "Text",
-            },
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
-    }
-})
-
 # ============================================
-# OTHERWISE (manual trigger)
+# ASK ESERCENTE (pre-filled with merchant if from Wallet)
 # ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
-    "WFWorkflowActionParameters": {
-        "GroupingIdentifier": if_group,
-        "WFControlFlowMode": 1,
-    }
-})
-
-# Ask for Merchant
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
     "WFWorkflowActionParameters": {
-        "WFAskActionPrompt": "Esercente / Descrizione?",
+        "WFAskActionPrompt": "Esercente?",
         "WFInputType": "Text",
+        "WFAskActionDefaultAnswer": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_get_merchant, "Text"),
+        }),
         "UUID": uuid_ask_merchant,
     }
 })
 
-# Set Variable esercente (manual)
+# SET VARIABLE esercente
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
     "WFWorkflowActionParameters": {
         "WFVariableName": "esercente",
         "WFInput": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_ask_merchant,
-                "OutputName": "Provided Input",
-            },
+            "Value": make_attachment(uuid_ask_merchant, "Provided Input"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
     }
 })
 
-# Ask for Amount
+# ============================================
+# ASK IMPORTO (pre-filled with amount if from Wallet)
+# ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
     "WFWorkflowActionParameters": {
         "WFAskActionPrompt": "Importo (EUR)?",
         "WFInputType": "Number",
+        "WFAskActionDefaultAnswer": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_get_amount, "Number"),
+        }),
         "UUID": uuid_ask_amount,
     }
 })
 
-# Set Variable importo (manual)
+# SET VARIABLE importo
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
     "WFWorkflowActionParameters": {
         "WFVariableName": "importo",
         "WFInput": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_ask_amount,
-                "OutputName": "Provided Input",
-            },
+            "Value": make_attachment(uuid_ask_amount, "Provided Input"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
-    }
-})
-
-# ============================================
-# END IF
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.conditional",
-    "WFWorkflowActionParameters": {
-        "GroupingIdentifier": if_group,
-        "WFControlFlowMode": 2,
     }
 })
 
@@ -246,11 +185,7 @@ for cat in categories:
         "WFWorkflowActionParameters": {
             "WFVariableName": "categoria",
             "WFInput": {
-                "Value": {
-                    "Type": "ActionOutput",
-                    "OutputUUID": uuid_set_cat[cat],
-                    "OutputName": "Text",
-                },
+                "Value": make_attachment(uuid_set_cat[cat], "Text"),
                 "WFSerializationType": "WFTextTokenAttachment",
             },
         }
@@ -281,11 +216,7 @@ actions.append({
         "WFDateFormatStyle": "Custom",
         "WFDateFormat": "dd/MM/yyyy",
         "WFDate": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_date,
-                "OutputName": "Date",
-            },
+            "Value": make_attachment(uuid_date, "Date"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "UUID": uuid_format_date,
@@ -298,11 +229,7 @@ actions.append({
         "WFDateFormatStyle": "Custom",
         "WFDateFormat": "HH:mm",
         "WFDate": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_date,
-                "OutputName": "Date",
-            },
+            "Value": make_attachment(uuid_date, "Date"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "UUID": uuid_format_time,
@@ -359,31 +286,11 @@ actions.append({
 # ============================================
 csv_template = f"{P},{P},{P},{P},{P}"
 csv_attachments = {
-    "{0, 1}": {
-        "Type": "ActionOutput",
-        "OutputUUID": uuid_format_date,
-        "OutputName": "Formatted Date",
-    },
-    "{2, 1}": {
-        "Type": "ActionOutput",
-        "OutputUUID": uuid_format_time,
-        "OutputName": "Formatted Date",
-    },
-    "{4, 1}": {
-        "Type": "ActionOutput",
-        "OutputUUID": uuid_get_esercente,
-        "OutputName": "Variable",
-    },
-    "{6, 1}": {
-        "Type": "ActionOutput",
-        "OutputUUID": uuid_get_categoria,
-        "OutputName": "Variable",
-    },
-    "{8, 1}": {
-        "Type": "ActionOutput",
-        "OutputUUID": uuid_get_importo,
-        "OutputName": "Variable",
-    },
+    "{0, 1}": make_attachment(uuid_format_date, "Formatted Date"),
+    "{2, 1}": make_attachment(uuid_format_time, "Formatted Date"),
+    "{4, 1}": make_attachment(uuid_get_esercente, "Variable"),
+    "{6, 1}": make_attachment(uuid_get_categoria, "Variable"),
+    "{8, 1}": make_attachment(uuid_get_importo, "Variable"),
 }
 
 actions.append({
@@ -402,11 +309,7 @@ actions.append({
     "WFWorkflowActionParameters": {
         "WFFilePath": "Shortcuts/Spese.csv",
         "WFInput": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_text_line,
-                "OutputName": "Text",
-            },
+            "Value": make_attachment(uuid_text_line, "Text"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "WFAppendOnNewLine": True,
@@ -419,16 +322,8 @@ actions.append({
 # ============================================
 notif_template = f"Spesa registrata: \u20ac{P} - {P}"
 notif_attachments = {
-    "{20, 1}": {
-        "Type": "ActionOutput",
-        "OutputUUID": uuid_get_importo,
-        "OutputName": "Variable",
-    },
-    "{24, 1}": {
-        "Type": "ActionOutput",
-        "OutputUUID": uuid_get_esercente,
-        "OutputName": "Variable",
-    },
+    "{20, 1}": make_attachment(uuid_get_importo, "Variable"),
+    "{24, 1}": make_attachment(uuid_get_esercente, "Variable"),
 }
 
 actions.append({
@@ -447,6 +342,7 @@ shortcut = {
     "WFWorkflowMinimumClientVersion": 900,
     "WFWorkflowMinimumClientVersionString": "900",
     "WFWorkflowClientVersion": "2702.0.4",
+    "WFWorkflowHasShortcutInputVariables": True,
     "WFWorkflowName": "Spese",
     "WFWorkflowIcon": {
         "WFWorkflowIconStartColor": 463140863,
