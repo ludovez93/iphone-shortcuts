@@ -510,6 +510,7 @@ shortcut = {
         "WFSafariWebPageContentItem",
         "WFStringContentItem",
         "WFURLContentItem",
+        "WFWalletPassContentItem",
     ],
     "WFWorkflowTypes": ["NCWidget", "WatchKit"],
     "WFWorkflowActions": actions,
