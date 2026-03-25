@@ -28,9 +28,7 @@ uuid_ask_edit = uid()
 
 actions = []
 
-# ============================================
-# READ FILE
-# ============================================
+# 1. READ FILE
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.open",
     "WFWorkflowActionParameters": {
@@ -47,9 +45,7 @@ actions.append({
     }
 })
 
-# ============================================
-# GET TEXT FROM FILE
-# ============================================
+# 2. GET TEXT FROM FILE
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
     "WFWorkflowActionParameters": {
@@ -60,81 +56,7 @@ actions.append({
     }
 })
 
-# ============================================
-# ASK FOR INPUT (editable text field with current content)
-# User can read, edit, delete lines, then tap OK to save
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
-    "WFWorkflowActionParameters": {
-        "WFAskActionPrompt": "Le tue spese (modifica e premi OK):",
-        "WFInputType": "Text",
-        "WFAskActionDefaultAnswer": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_get_text, "Text"),
-        }),
-        "UUID": uuid_ask_edit,
-    }
-})
-
-# ============================================
-# SAVE EDITED TEXT BACK TO FILE (overwrite)
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.file.createfolder",
-    "WFWorkflowActionParameters": {},
-})
-
-# Use Save File to overwrite
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
-    "WFWorkflowActionParameters": {
-        "WFFileStorageService": "iCloud",
-        "WFFilePath": {
-            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
-            "WFSerializationType": "WFTextTokenString",
-        },
-        "WFSaveFileOverwrite": True,
-        "WFInput": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_ask_edit, "Provided Input"),
-        }),
-    }
-})
-
-# Actually, let me use a simpler approach - delete file then append
-# Remove the createfolder and save actions, use a cleaner method
-
-# Rebuild actions list properly
-actions = []
-
-# READ FILE
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.open",
-    "WFWorkflowActionParameters": {
-        "WFFileStorageService": "iCloud",
-        "WFFilePath": {
-            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
-            "WFSerializationType": "WFTextTokenString",
-        },
-        "WFGetFilePath": {
-            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
-            "WFSerializationType": "WFTextTokenString",
-        },
-        "UUID": uuid_get_file,
-    }
-})
-
-# GET TEXT
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
-    "WFWorkflowActionParameters": {
-        "WFTextActionText": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_get_file, "File"),
-        }),
-        "UUID": uuid_get_text,
-    }
-})
-
-# ASK - editable text with current content
+# 3. ASK - editable text
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
     "WFWorkflowActionParameters": {
@@ -147,23 +69,39 @@ actions.append({
     }
 })
 
-# SAVE - overwrite file with edited text
+# 4. DELETE OLD FILE
 actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
+    "WFWorkflowActionIdentifier": "is.workflow.actions.file.delete",
     "WFWorkflowActionParameters": {
-        "WFFileStorageService": "iCloud",
+        "WFInput": {
+            "Value": {
+                "Type": "ActionOutput",
+                "OutputUUID": uuid_get_file,
+                "OutputName": "File",
+            },
+            "WFSerializationType": "WFTextTokenAttachment",
+        },
+        "WFDeleteFileConfirmDeletion": False,
+    }
+})
+
+# 5. WRITE NEW FILE (append to non-existing file = create)
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
+    "WFWorkflowActionParameters": {
         "WFFilePath": {
             "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
             "WFSerializationType": "WFTextTokenString",
         },
-        "WFSaveFileOverwrite": True,
         "WFInput": make_token_string(P, {
             "{0, 1}": make_attachment(uuid_ask_edit, "Provided Input"),
         }),
+        "WFAppendOnNewLine": False,
+        "WFFileStorageService": "iCloud",
     }
 })
 
-# DONE notification
+# 6. NOTIFICATION
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
     "WFWorkflowActionParameters": {
@@ -173,7 +111,6 @@ actions.append({
     }
 })
 
-# BUILD
 shortcut = {
     "WFWorkflowMinimumClientVersion": 900,
     "WFWorkflowMinimumClientVersionString": "900",
