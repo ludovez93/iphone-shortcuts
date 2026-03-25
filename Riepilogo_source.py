@@ -25,6 +25,7 @@ P = "\ufffc"
 uuid_get_file = uid()
 uuid_get_text = uid()
 uuid_ask_edit = uid()
+uuid_clean_text = uid()
 
 actions = []
 
@@ -69,7 +70,18 @@ actions.append({
     }
 })
 
-# 4. DELETE OLD FILE
+# 4. CONVERT to plain text (fixes NSString error)
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
+    "WFWorkflowActionParameters": {
+        "WFTextActionText": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_ask_edit, "Provided Input"),
+        }),
+        "UUID": uuid_clean_text,
+    }
+})
+
+# 5. DELETE OLD FILE
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.file.delete",
     "WFWorkflowActionParameters": {
@@ -85,7 +97,7 @@ actions.append({
     }
 })
 
-# 5. WRITE NEW FILE (append to non-existing file = create)
+# 6. WRITE NEW FILE
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
     "WFWorkflowActionParameters": {
@@ -94,14 +106,14 @@ actions.append({
             "WFSerializationType": "WFTextTokenString",
         },
         "WFInput": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_ask_edit, "Provided Input"),
+            "{0, 1}": make_attachment(uuid_clean_text, "Text"),
         }),
         "WFAppendOnNewLine": False,
         "WFFileStorageService": "iCloud",
     }
 })
 
-# 6. NOTIFICATION
+# 7. NOTIFICATION
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
     "WFWorkflowActionParameters": {
@@ -126,9 +138,7 @@ shortcut = {
     "WFWorkflowImportQuestions": [],
 }
 
-output_path = "Riepilogo.shortcut"
-with open(output_path, "wb") as f:
+with open("Riepilogo.shortcut", "wb") as f:
     plistlib.dump(shortcut, f, fmt=plistlib.FMT_BINARY)
 
-print(f"Shortcut creato: {output_path}")
-print(f"Azioni totali: {len(actions)}")
+print(f"Azioni: {len(actions)}")
