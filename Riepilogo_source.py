@@ -21,11 +21,8 @@ def make_attachment(output_uuid, output_name):
     }
 
 P = "\ufffc"
-
 uuid_get_file = uid()
 uuid_get_text = uid()
-uuid_ask_edit = uid()
-uuid_clean_text = uid()
 
 actions = []
 
@@ -35,18 +32,18 @@ actions.append({
     "WFWorkflowActionParameters": {
         "WFFileStorageService": "iCloud",
         "WFFilePath": {
-            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
+            "Value": {"attachmentsByRange": {}, "string": "Spese.txt"},
             "WFSerializationType": "WFTextTokenString",
         },
         "WFGetFilePath": {
-            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
+            "Value": {"attachmentsByRange": {}, "string": "Spese.txt"},
             "WFSerializationType": "WFTextTokenString",
         },
         "UUID": uuid_get_file,
     }
 })
 
-# 2. GET TEXT FROM FILE
+# 2. GET TEXT
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
     "WFWorkflowActionParameters": {
@@ -57,59 +54,13 @@ actions.append({
     }
 })
 
-# 3. ASK - editable text
+# 3. SHOW RESULT
 actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
+    "WFWorkflowActionIdentifier": "is.workflow.actions.showresult",
     "WFWorkflowActionParameters": {
-        "WFAskActionPrompt": "Modifica e premi OK per salvare:",
-        "WFInputType": "Text",
-        "WFAskActionDefaultAnswer": make_token_string(P, {
+        "Text": make_token_string(P, {
             "{0, 1}": make_attachment(uuid_get_text, "Text"),
         }),
-        "UUID": uuid_ask_edit,
-    }
-})
-
-# 4. CONVERT to plain text (fixes NSString error)
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
-    "WFWorkflowActionParameters": {
-        "WFTextActionText": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_ask_edit, "Provided Input"),
-        }),
-        "UUID": uuid_clean_text,
-    }
-})
-
-# 5. SAVE FILE (overwrite, no delete needed)
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
-    "WFWorkflowActionParameters": {
-        "WFInput": {
-            "Value": {
-                "Type": "ActionOutput",
-                "OutputUUID": uuid_clean_text,
-                "OutputName": "Text",
-            },
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
-        "WFFileDestinationPath": {
-            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
-            "WFSerializationType": "WFTextTokenString",
-        },
-        "WFSaveFileOverwrite": True,
-        "WFAskWhereToSave": False,
-        "WFFileStorageService": "iCloud",
-    }
-})
-
-# 7. NOTIFICATION
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
-    "WFWorkflowActionParameters": {
-        "WFNotificationActionBody": "Spese aggiornate",
-        "WFNotificationActionTitle": "Salvato",
-        "WFNotificationActionSound": True,
     }
 })
 

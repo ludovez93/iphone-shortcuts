@@ -312,7 +312,7 @@ actions.append({
         "WFFilePath": {
             "Value": {
                 "attachmentsByRange": {},
-                "string": "Shortcuts/Spese.txt",
+                "string": "Spese.txt",
             },
             "WFSerializationType": "WFTextTokenString",
         },
@@ -350,7 +350,7 @@ actions.append({
         "WFFilePath": {
             "Value": {
                 "attachmentsByRange": {},
-                "string": "Shortcuts/Spese.csv",
+                "string": "Spese.csv",
             },
             "WFSerializationType": "WFTextTokenString",
         },
