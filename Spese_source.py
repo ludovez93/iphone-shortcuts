@@ -309,13 +309,19 @@ actions.append({
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
     "WFWorkflowActionParameters": {
-        "WFFilePath": "Shortcuts/Spese.txt",
+        "WFFilePath": {
+            "Value": {
+                "attachmentsByRange": {},
+                "string": "Shortcuts/Spese.txt",
+            },
+            "WFSerializationType": "WFTextTokenString",
+        },
         "WFInput": {
             "Value": make_attachment(uuid_readable_line, "Text"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "WFAppendOnNewLine": True,
-        "WFFileAppendService": "iCloud",
+        "WFFileStorageService": "iCloud",
     }
 })
 
@@ -342,13 +348,19 @@ actions.append({
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
     "WFWorkflowActionParameters": {
-        "WFFilePath": "Shortcuts/Spese.csv",
+        "WFFilePath": {
+            "Value": {
+                "attachmentsByRange": {},
+                "string": "Shortcuts/Spese.csv",
+            },
+            "WFSerializationType": "WFTextTokenString",
+        },
         "WFInput": {
             "Value": make_attachment(uuid_text_line, "Text"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "WFAppendOnNewLine": True,
-        "WFFileAppendService": "iCloud",
+        "WFFileStorageService": "iCloud",
     }
 })
 
