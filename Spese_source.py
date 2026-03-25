@@ -316,10 +316,9 @@ actions.append({
             },
             "WFSerializationType": "WFTextTokenString",
         },
-        "WFInput": {
-            "Value": make_attachment(uuid_readable_line, "Text"),
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
+        "WFInput": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_readable_line, "Text"),
+        }),
         "WFAppendOnNewLine": True,
         "WFFileStorageService": "iCloud",
     }
@@ -355,10 +354,9 @@ actions.append({
             },
             "WFSerializationType": "WFTextTokenString",
         },
-        "WFInput": {
-            "Value": make_attachment(uuid_text_line, "Text"),
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
+        "WFInput": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_text_line, "Text"),
+        }),
         "WFAppendOnNewLine": True,
         "WFFileStorageService": "iCloud",
     }
