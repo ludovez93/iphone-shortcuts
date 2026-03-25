@@ -81,34 +81,24 @@ actions.append({
     }
 })
 
-# 5. DELETE OLD FILE
+# 5. SAVE FILE (overwrite, no delete needed)
 actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.file.delete",
+    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
     "WFWorkflowActionParameters": {
         "WFInput": {
             "Value": {
                 "Type": "ActionOutput",
-                "OutputUUID": uuid_get_file,
-                "OutputName": "File",
+                "OutputUUID": uuid_clean_text,
+                "OutputName": "Text",
             },
             "WFSerializationType": "WFTextTokenAttachment",
         },
-        "WFDeleteFileConfirmDeletion": False,
-    }
-})
-
-# 6. WRITE NEW FILE
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
-    "WFWorkflowActionParameters": {
-        "WFFilePath": {
+        "WFFileDestinationPath": {
             "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
             "WFSerializationType": "WFTextTokenString",
         },
-        "WFInput": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_clean_text, "Text"),
-        }),
-        "WFAppendOnNewLine": False,
+        "WFSaveFileOverwrite": True,
+        "WFAskWhereToSave": False,
         "WFFileStorageService": "iCloud",
     }
 })
