@@ -24,28 +24,23 @@ P = "\ufffc"
 
 uuid_get_file = uid()
 uuid_get_text = uid()
+uuid_ask_edit = uid()
 
 actions = []
 
 # ============================================
-# GET FILE: Spese.txt from iCloud
+# READ FILE
 # ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.open",
     "WFWorkflowActionParameters": {
         "WFFileStorageService": "iCloud",
         "WFFilePath": {
-            "Value": {
-                "attachmentsByRange": {},
-                "string": "Shortcuts/Spese.txt",
-            },
+            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
             "WFSerializationType": "WFTextTokenString",
         },
         "WFGetFilePath": {
-            "Value": {
-                "attachmentsByRange": {},
-                "string": "Shortcuts/Spese.txt",
-            },
+            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
             "WFSerializationType": "WFTextTokenString",
         },
         "UUID": uuid_get_file,
@@ -66,30 +61,126 @@ actions.append({
 })
 
 # ============================================
-# SHOW RESULT (big readable text)
+# ASK FOR INPUT (editable text field with current content)
+# User can read, edit, delete lines, then tap OK to save
 # ============================================
 actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.showresult",
+    "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
     "WFWorkflowActionParameters": {
-        "Text": make_token_string(
-            f"LE MIE SPESE\n--------------------\n{P}",
-            {
-                "{34, 1}": make_attachment(uuid_get_text, "Text"),
-            }
-        ),
+        "WFAskActionPrompt": "Le tue spese (modifica e premi OK):",
+        "WFInputType": "Text",
+        "WFAskActionDefaultAnswer": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_get_text, "Text"),
+        }),
+        "UUID": uuid_ask_edit,
     }
 })
 
 # ============================================
-# BUILD SHORTCUT PLIST
+# SAVE EDITED TEXT BACK TO FILE (overwrite)
 # ============================================
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.file.createfolder",
+    "WFWorkflowActionParameters": {},
+})
+
+# Use Save File to overwrite
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
+    "WFWorkflowActionParameters": {
+        "WFFileStorageService": "iCloud",
+        "WFFilePath": {
+            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
+            "WFSerializationType": "WFTextTokenString",
+        },
+        "WFSaveFileOverwrite": True,
+        "WFInput": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_ask_edit, "Provided Input"),
+        }),
+    }
+})
+
+# Actually, let me use a simpler approach - delete file then append
+# Remove the createfolder and save actions, use a cleaner method
+
+# Rebuild actions list properly
+actions = []
+
+# READ FILE
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.open",
+    "WFWorkflowActionParameters": {
+        "WFFileStorageService": "iCloud",
+        "WFFilePath": {
+            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
+            "WFSerializationType": "WFTextTokenString",
+        },
+        "WFGetFilePath": {
+            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
+            "WFSerializationType": "WFTextTokenString",
+        },
+        "UUID": uuid_get_file,
+    }
+})
+
+# GET TEXT
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
+    "WFWorkflowActionParameters": {
+        "WFTextActionText": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_get_file, "File"),
+        }),
+        "UUID": uuid_get_text,
+    }
+})
+
+# ASK - editable text with current content
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.ask",
+    "WFWorkflowActionParameters": {
+        "WFAskActionPrompt": "Modifica e premi OK per salvare:",
+        "WFInputType": "Text",
+        "WFAskActionDefaultAnswer": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_get_text, "Text"),
+        }),
+        "UUID": uuid_ask_edit,
+    }
+})
+
+# SAVE - overwrite file with edited text
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.documentpicker.save",
+    "WFWorkflowActionParameters": {
+        "WFFileStorageService": "iCloud",
+        "WFFilePath": {
+            "Value": {"attachmentsByRange": {}, "string": "Shortcuts/Spese.txt"},
+            "WFSerializationType": "WFTextTokenString",
+        },
+        "WFSaveFileOverwrite": True,
+        "WFInput": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_ask_edit, "Provided Input"),
+        }),
+    }
+})
+
+# DONE notification
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
+    "WFWorkflowActionParameters": {
+        "WFNotificationActionBody": "Spese aggiornate",
+        "WFNotificationActionTitle": "Salvato",
+        "WFNotificationActionSound": True,
+    }
+})
+
+# BUILD
 shortcut = {
     "WFWorkflowMinimumClientVersion": 900,
     "WFWorkflowMinimumClientVersionString": "900",
     "WFWorkflowClientVersion": "2702.0.4",
     "WFWorkflowName": "Riepilogo Spese",
     "WFWorkflowIcon": {
-        "WFWorkflowIconStartColor": 4274264319,  # Orange
+        "WFWorkflowIconStartColor": 4274264319,
         "WFWorkflowIconGlyphNumber": 59470,
     },
     "WFWorkflowInputContentItemClasses": [],
