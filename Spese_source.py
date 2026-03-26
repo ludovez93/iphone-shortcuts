@@ -5,6 +5,8 @@ def uid():
     return str(uuid.uuid4()).upper()
 
 # Action output UUIDs
+uuid_get_amount_text = uid()
+uuid_get_amount_clean = uid()
 uuid_get_amount = uid()
 uuid_get_merchant = uid()
 uuid_replace_cibo = uid()
@@ -65,25 +67,64 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.comment",
     "WFWorkflowActionParameters": {
         "WFCommentActionText": (
-            "Spese Tracker v6 - FULL AUTO\n"
-            "Zero tap: importo + esercente da Wallet,\n"
-            "categoria via regex, salva CSV, notifica."
+            "Spese Tracker v8 - FULL AUTO\n"
+            "Zero tap: importo + esercente da Wallet Transaction,\n"
+            "categoria via regex, salva CSV, notifica.\n"
+            "Usa Aggrandizements per estrarre Amount/Merchant."
         )
     }
 })
 
 # ============================================
-# EXTRACT AMOUNT FROM SHORTCUT INPUT
+# EXTRACT AMOUNT FROM WALLET TRANSACTION (via Aggrandizement)
+# Step 1: Get Amount property as text (returns e.g. "€12,50" or "12.50 EUR")
 # ============================================
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
+    "WFWorkflowActionParameters": {
+        "WFTextActionText": {
+            "Value": {
+                "string": P,
+                "attachmentsByRange": {
+                    "{0, 1}": {
+                        "Type": "ExtensionInput",
+                        "Aggrandizements": [
+                            {
+                                "Type": "WFPropertyVariableAggrandizement",
+                                "PropertyName": "Amount",
+                            }
+                        ],
+                    }
+                }
+            },
+            "WFSerializationType": "WFTextTokenString",
+        },
+        "UUID": uuid_get_amount_text,
+    }
+})
+
+# Step 2: Strip currency symbols, keep only digits and comma/dot
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.text.replace",
+    "WFWorkflowActionParameters": {
+        "UUID": uuid_get_amount_clean,
+        "WFReplaceTextFind": "[^\\d\\.,]",
+        "WFReplaceTextReplace": "",
+        "WFReplaceTextRegularExpression": True,
+        "WFReplaceTextCaseSensitive": False,
+        "WFInput": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_get_amount_text, "Text"),
+        }),
+    }
+})
+
+# Step 3: Convert cleaned text to number
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.detect.number",
     "WFWorkflowActionParameters": {
-        "WFInput": {
-            "Value": {
-                "Type": "ExtensionInput",
-            },
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
+        "WFInput": make_token_string(P, {
+            "{0, 1}": make_attachment(uuid_get_amount_clean, "Replace Text"),
+        }),
         "UUID": uuid_get_amount,
     }
 })
@@ -101,7 +142,7 @@ actions.append({
 })
 
 # ============================================
-# EXTRACT MERCHANT FROM SHORTCUT INPUT AS TEXT
+# EXTRACT MERCHANT FROM WALLET TRANSACTION (via Aggrandizement)
 # ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
@@ -112,6 +153,12 @@ actions.append({
                 "attachmentsByRange": {
                     "{0, 1}": {
                         "Type": "ExtensionInput",
+                        "Aggrandizements": [
+                            {
+                                "Type": "WFPropertyVariableAggrandizement",
+                                "PropertyName": "Merchant",
+                            }
+                        ],
                     }
                 }
             },
