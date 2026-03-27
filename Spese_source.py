@@ -255,13 +255,25 @@ actions.append({
 })
 
 # ============================================
-# FORMAT DATE (no separate Date action — format.date defaults to current date)
+# FORMAT DATE — Get Current Date, then format it
 # ============================================
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.date",
+    "WFWorkflowActionParameters": {
+        "WFDateActionMode": "Current Date",
+        "UUID": uuid_date,
+    }
+})
+
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.format.date",
     "WFWorkflowActionParameters": {
         "WFDateFormatStyle": "Custom",
         "WFDateFormat": "dd/MM/yyyy",
+        "WFDate": {
+            "Value": make_attachment(uuid_date, "Current Date"),
+            "WFSerializationType": "WFTextTokenAttachment",
+        },
         "UUID": uuid_format_date,
     }
 })
@@ -271,6 +283,10 @@ actions.append({
     "WFWorkflowActionParameters": {
         "WFDateFormatStyle": "Custom",
         "WFDateFormat": "HH:mm",
+        "WFDate": {
+            "Value": make_attachment(uuid_date, "Current Date"),
+            "WFSerializationType": "WFTextTokenAttachment",
+        },
         "UUID": uuid_format_time,
     }
 })
