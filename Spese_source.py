@@ -15,9 +15,6 @@ uuid_replace_abbigliamento = uid()
 uuid_replace_svago = uid()
 uuid_replace_bollette = uid()
 uuid_replace_altro = uid()
-uuid_date = uid()
-uuid_format_date = uid()
-uuid_format_time = uid()
 uuid_text_line = uid()
 uuid_get_importo = uid()
 uuid_get_esercente = uid()
@@ -255,44 +252,7 @@ actions.append({
 })
 
 # ============================================
-# FORMAT DATE — Get Current Date, then format it
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.date",
-    "WFWorkflowActionParameters": {
-        "WFDateActionMode": "Current Date",
-        "UUID": uuid_date,
-    }
-})
-
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.format.date",
-    "WFWorkflowActionParameters": {
-        "WFDateFormatStyle": "Custom",
-        "WFDateFormat": "dd/MM/yyyy",
-        "WFDate": {
-            "Value": make_attachment(uuid_date, "Current Date"),
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
-        "UUID": uuid_format_date,
-    }
-})
-
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.format.date",
-    "WFWorkflowActionParameters": {
-        "WFDateFormatStyle": "Custom",
-        "WFDateFormat": "HH:mm",
-        "WFDate": {
-            "Value": make_attachment(uuid_date, "Current Date"),
-            "WFSerializationType": "WFTextTokenAttachment",
-        },
-        "UUID": uuid_format_time,
-    }
-})
-
-# ============================================
-# GET VARIABLES
+# GET VARIABLES (no Date/Format actions — date is embedded inline via CurrentDate)
 # ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.getvariable",
@@ -329,14 +289,26 @@ actions.append({
 
 # ============================================
 # BUILD READABLE LINE: dd/MM HH:mm | Esercente | Categoria | €Importo
+# Uses CurrentDate magic variable with WFDateFormatVariableAggrandizement
 # ============================================
-# Template: "dd/MM HH:mm | Esercente | Categoria | €Importo"
-#            P    P        P           P            P
+def make_current_date(fmt):
+    """CurrentDate inline with custom date format."""
+    return {
+        "Type": "CurrentDate",
+        "Aggrandizements": [
+            {
+                "Type": "WFDateFormatVariableAggrandizement",
+                "WFDateFormatStyle": "Custom",
+                "WFDateFormat": fmt,
+            }
+        ],
+    }
+
 readable_template = f"{P} {P} | {P} | {P} | \u20ac{P}"
 uuid_readable_line = uid()
 readable_attachments = {
-    "{0, 1}": make_attachment(uuid_format_date, "Formatted Date"),
-    "{2, 1}": make_attachment(uuid_format_time, "Formatted Date"),
+    "{0, 1}": make_current_date("dd/MM"),
+    "{2, 1}": make_current_date("HH:mm"),
     "{6, 1}": make_attachment(uuid_get_esercente, "Variable"),
     "{10, 1}": make_attachment(uuid_get_categoria, "Variable"),
     "{15, 1}": make_attachment(uuid_get_importo, "Variable"),
@@ -376,8 +348,8 @@ actions.append({
 # ============================================
 csv_template = f"{P},{P},{P},{P},{P}"
 csv_attachments = {
-    "{0, 1}": make_attachment(uuid_format_date, "Formatted Date"),
-    "{2, 1}": make_attachment(uuid_format_time, "Formatted Date"),
+    "{0, 1}": make_current_date("dd/MM/yyyy"),
+    "{2, 1}": make_current_date("HH:mm"),
     "{4, 1}": make_attachment(uuid_get_esercente, "Variable"),
     "{6, 1}": make_attachment(uuid_get_categoria, "Variable"),
     "{8, 1}": make_attachment(uuid_get_importo, "Variable"),
