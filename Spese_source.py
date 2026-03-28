@@ -385,10 +385,11 @@ actions.append({
 # SHOW NOTIFICATION
 # ============================================
 notif_template = f"{P} | \u20ac{P} | {P}"
+# Positions: P(0) ' '(1) '|'(2) ' '(3) '€'(4) P(5) ' '(6) '|'(7) ' '(8) P(9)
 notif_attachments = {
     "{0, 1}": make_attachment(uuid_get_esercente, "Variable"),
-    "{4, 1}": make_attachment(uuid_get_importo, "Variable"),
-    "{8, 1}": make_attachment(uuid_get_categoria, "Variable"),
+    "{5, 1}": make_attachment(uuid_get_importo, "Variable"),
+    "{9, 1}": make_attachment(uuid_get_categoria, "Variable"),
 }
 
 actions.append({
