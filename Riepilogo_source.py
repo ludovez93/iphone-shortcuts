@@ -80,7 +80,20 @@ actions.append({
 })
 
 # ============================================
-# 3. SET VARIABLE "contenuto"
+# 3. MATCH TEXT: find all €amounts (e.g. €16,6 €32,40)
+# Uses implicit input from Get Text (previous action)
+# ============================================
+actions.append({
+    "WFWorkflowActionIdentifier": "is.workflow.actions.text.match",
+    "WFWorkflowActionParameters": {
+        "WFMatchTextPattern": "\u20ac[\\d,\\.]+",
+        "WFMatchTextCaseSensitive": False,
+        "UUID": uuid_match,
+    }
+})
+
+# ============================================
+# 4. SET VARIABLE "contenuto"
 # ============================================
 actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.setvariable",
@@ -90,21 +103,6 @@ actions.append({
             "Value": make_attachment(uuid_get_text, "Text"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
-    }
-})
-
-# ============================================
-# 4. MATCH TEXT: find all €amounts (e.g. €16,6 €32,40)
-# ============================================
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.text.match",
-    "WFWorkflowActionParameters": {
-        "WFMatchTextPattern": "\u20ac[\\d,\\.]+",
-        "WFMatchTextCaseSensitive": False,
-        "text": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_get_text, "Text"),
-        }),
-        "UUID": uuid_match,
     }
 })
 
@@ -140,7 +138,7 @@ actions.append({
     "WFWorkflowActionIdentifier": "is.workflow.actions.repeat.each",
     "WFWorkflowActionParameters": {
         "WFInput": {
-            "Value": make_attachment(uuid_match, "matches"),
+            "Value": make_attachment(uuid_match, "Matches"),
             "WFSerializationType": "WFTextTokenAttachment",
         },
         "GroupingIdentifier": uuid_repeat_group,

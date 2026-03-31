@@ -344,44 +344,6 @@ actions.append({
 })
 
 # ============================================
-# ALSO APPEND CSV (for Excel export)
-# ============================================
-csv_template = f"{P},{P},{P},{P},{P}"
-csv_attachments = {
-    "{0, 1}": make_current_date("dd/MM/yyyy"),
-    "{2, 1}": make_current_date("HH:mm"),
-    "{4, 1}": make_attachment(uuid_get_esercente, "Variable"),
-    "{6, 1}": make_attachment(uuid_get_categoria, "Variable"),
-    "{8, 1}": make_attachment(uuid_get_importo, "Variable"),
-}
-
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
-    "WFWorkflowActionParameters": {
-        "WFTextActionText": make_token_string(csv_template, csv_attachments),
-        "UUID": uuid_text_line,
-    }
-})
-
-actions.append({
-    "WFWorkflowActionIdentifier": "is.workflow.actions.file.append",
-    "WFWorkflowActionParameters": {
-        "WFFilePath": {
-            "Value": {
-                "attachmentsByRange": {},
-                "string": "Spese.csv",
-            },
-            "WFSerializationType": "WFTextTokenString",
-        },
-        "WFInput": make_token_string(P, {
-            "{0, 1}": make_attachment(uuid_text_line, "Text"),
-        }),
-        "WFAppendOnNewLine": True,
-        "WFFileStorageService": "iCloud",
-    }
-})
-
-# ============================================
 # SHOW NOTIFICATION
 # ============================================
 notif_template = f"{P} | \u20ac{P} | {P}"
